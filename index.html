@@ -1,210 +1,244 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
-  <head>
-    <meta charset="UTF-8">
-    <title>Check-in Ospiti</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
+  <meta charset="utf-8" />
+  <title>Accredito Ospiti – Check-in Tool iPad</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#2b384b;color:#fff;margin:0;padding:15px}
+    h1{text-align:center;font-size:22px;margin-bottom:20px}
+    .card{background:#1f2937;border-radius:10px;padding:15px;margin-bottom:15px}
+    #searchBox{padding:12px;border-radius:8px;border:none;width:70%;margin:6px auto;display:block;font-size:18px}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:18px}
+    th,td{padding:14px;border-bottom:1px solid #444}
+    th{background:#374151;text-align:left}
+    tr{cursor:pointer}
+    tr:hover{background:#4b5563}
+    tr.confirmed{background:#065f46!important;color:#fff}
+    tr.selected{background:#2563eb!important;color:#fff}
+    button{padding:12px 14px;border:none;border-radius:8px;cursor:pointer;margin:6px;font-size:16px}
+    button.primary{background:#e52013;color:#fff}
+    button.ok{background:#16a34a;color:#fff}
+    .counter{margin-top:10px;font-size:20px;text-align:center}
+    .hidden{display:none}
+    .popupConfirm{position:fixed;top:15%;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:30px 40px;border-radius:12px;font-size:26px;font-weight:bold;display:none;z-index:99999;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.6);animation:pop .3s ease-out}
+    @keyframes pop{from{transform:translateX(-50%) scale(.9);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+    .actionsBottom{text-align:center;margin-top:30px}
+    .actionsBottom button{min-width:140px;margin:8px;font-size:16px;color:#fff}
+    #showListBtn{background:#2563eb}
+    #reportBtn{background:#d97706}
+    #resetBtn{background:#dc2626}
+    /* Modal password */
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:10000;visibility:hidden;opacity:0;transition:opacity .3s;}
+    .modal.show{visibility:visible;opacity:1;}
+    .modal-content{background:#1f2937;padding:20px;border-radius:12px;text-align:center;width:300px;}
+    .modal h2{margin:0 0 15px;font-size:20px}
+    .modal input{width:100%;font-size:22px;padding:12px;border-radius:8px;border:none;text-align:center;margin-bottom:15px;background:#fff;color:#000;}
+    .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:15px}
+    .keypad button{font-size:22px;padding:15px;border-radius:8px;background:#374151;color:#fff}
+    .modal .actions{display:flex;justify-content:space-between}
+    .modal button.action{width:48%;font-size:18px}
+  </style>
+</head>
+<body>
+  <h1>TAGLIO NASTRO – Accredito Ospiti</h1>
 
-    <style>
-      body {
-        font-family: system-ui, -apple-system, sans-serif;
-        margin: 0;
-        padding: 16px;
-        background: #f5f5f5;
-      }
+  <div class="card hidden" id="toolsCard">
+    <input type="text" id="searchBox" placeholder="Cerca ospite… (spazio = mostra tutti)" autofocus>
+    <div class="counter"><span id="countChecked">0</span> ingressi confermati su <span id="countTotal">0</span></div>
+  </div>
 
-      h1 {
-        font-size: 20px;
-        margin-bottom: 12px;
-      }
-
-      .top-bar {
-        margin-bottom: 16px;
-      }
-
-      input[type="search"] {
-        padding: 8px;
-        font-size: 16px;
-        width: 100%;
-        box-sizing: border-box;
-        margin-bottom: 12px;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: #ffffff;
-      }
-
-      th, td {
-        padding: 8px;
-        border-bottom: 1px solid #dddddd;
-        font-size: 14px;
-      }
-
-      tr:nth-child(even) {
-        background: #fafafa;
-      }
-
-      .badge-si {
-        color: green;
-        font-weight: bold;
-      }
-
-      .badge-no {
-        color: red;
-        font-weight: bold;
-      }
-
-      button {
-        padding: 6px 10px;
-        font-size: 13px;
-        cursor: pointer;
-      }
-
-      .btn-checkin {
-        border: none;
-        border-radius: 4px;
-        background: #2563eb;
-        color: #ffffff;
-      }
-
-      .btn-checkin[disabled] {
-        background: #cccccc;
-        cursor: default;
-      }
-    </style>
-  </head>
-
-  <body>
-    <h1>Check-in ospiti</h1>
-
-    <div class="top-bar">
-      <input
-        type="search"
-        id="search"
-        placeholder="Cerca nominativo…"
-        oninput="filterList(this.value)"
-      >
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Nominativo</th>
-          <th>Colore</th>
-          <th>Invitato</th>
-          <th>Ingresso</th>
-          <th>Azioni</th>
-        </tr>
-      </thead>
+  <div class="card hidden" id="tableCard">
+    <table id="dataTable">
+      <!-- adattato a Nominativo / Colore / Invitato -->
+      <thead><tr><th>Ospite</th><th>Colore</th><th>Invitato</th></tr></thead>
       <tbody id="tbody"></tbody>
     </table>
+  </div>
 
-    <script>
-      // URL della tua Web App Apps Script (API)
-      const API_URL = "https://script.google.com/macros/s/AKfycbxjdGIVzerloFY58fvjSQkvqn57dSAR5jJ4fluc6jRDHzOcxszbC83RpfuNHG_KffdJ/exec";
+  <div class="card hidden" id="confirmCard">
+    <button id="confirmBtn" class="ok" style="width:100%;">CONFERMA</button>
+  </div>
 
-      let allGuests = [];
+  <div class="actionsBottom hidden" id="exportCard">
+    <button id="showListBtn">Mostra/Nascondi Ospiti</button>
+    <button id="reportBtn">Scarica Report</button>
+    <button id="resetBtn">Reset 🔒</button>
+  </div>
 
-      // Carica la lista dagli Script Google
-      async function loadGuests() {
-        try {
-          const res = await fetch(API_URL + "?action=list");
-          const data = await res.json();
-          allGuests = data;
-          renderTable(data);
-        } catch (err) {
-          console.error(err);
-          alert("Errore nel caricamento della lista.");
-        }
-      }
+  <div class="popupConfirm" id="popupConfirm">Ospite Accreditato</div>
 
-      // Disegna la tabella
-      function renderTable(list) {
-        const tbody = document.getElementById("tbody");
-        tbody.innerHTML = "";
+  <!-- Modal password -->
+  <div id="passwordModal" class="modal">
+    <div class="modal-content">
+      <h2>Inserisci Password</h2>
+      <input type="password" id="passwordInput" readonly>
+      <div class="keypad">
+        <button>1</button><button>2</button><button>3</button>
+        <button>4</button><button>5</button><button>6</button>
+        <button>7</button><button>8</button><button>9</button>
+        <button>←</button><button>0</button><button>OK</button>
+      </div>
+      <div class="actions">
+        <button class="action ok" id="modalConfirm">Conferma</button>
+        <button class="action primary" id="modalCancel">Annulla</button>
+      </div>
+    </div>
+  </div>
 
-        list.forEach((riga) => {
-          const tr = document.createElement("tr");
+<script>
+/* ===== CONFIG GOOGLE SHEET / WEB APP (account agenziawithyou@gmail.com) ===== */
+const sheetURL = "https://script.google.com/macros/s/AKfycbxjdGIVzerloFY58fvjSQkvqn57dSAR5jJ4fluc6jRDHzOcxszbC83RpfuNHG_KffdJ/exec";
 
-          const nominativo = riga.nominativo || "";
-          const colore = riga.colore || "";
-          const invitato = riga.invitato || "";
-          const ingresso = riga.ingresso || "";
+/* ===== VARIABILI ===== */
+let rawRows=[], selectedRow=null, selectedData=null;
+let listVisible=false;
 
-          const giaEntrato = ingresso && String(ingresso).trim() !== "";
+const searchBox=document.getElementById('searchBox');
+const tbody=document.getElementById('tbody');
+const toolsCard=document.getElementById('toolsCard');
+const tableCard=document.getElementById('tableCard');
+const confirmCard=document.getElementById('confirmCard');
+const confirmBtn=document.getElementById('confirmBtn');
+const countChecked=document.getElementById('countChecked');
+const countTotal=document.getElementById('countTotal');
+const popupConfirm=document.getElementById('popupConfirm');
+const exportCard=document.getElementById('exportCard');
+const showListBtn=document.getElementById('showListBtn');
+const reportBtn=document.getElementById('reportBtn');
+const resetBtn=document.getElementById('resetBtn');
+const modal=document.getElementById('passwordModal');
+const passwordInput=document.getElementById('passwordInput');
+const modalConfirm=document.getElementById('modalConfirm');
+const modalCancel=document.getElementById('modalCancel');
 
-          tr.innerHTML = `
-            <td>${nominativo}</td>
-            <td>${colore}</td>
-            <td class="${invitato === "SI" ? "badge-si" : "badge-no"}">${invitato}</td>
-            <td>${ingresso}</td>
-            <td>
-              <button
-                class="btn-checkin"
-                ${giaEntrato ? "disabled" : ""}
-                onclick="segnaIngresso('${escapeForAttr(nominativo)}', '${escapeForAttr(colore)}')"
-              >
-                ${giaEntrato ? "Già entrato" : "Segna ingresso"}
-              </button>
-            </td>
-          `;
+/* ===== FUNZIONI ===== */
+async function caricaLista(){
+  try{
+    // usa l'azione "list" del backend Apps Script
+    let res = await fetch(sheetURL + "?action=list");
+    let data = await res.json();
+    rawRows = data;
+    renderTable();
+    toolsCard.classList.remove('hidden');
+    exportCard.classList.remove('hidden');
+  }catch(err){console.error("Errore caricamento:",err);}
+}
 
-          tbody.appendChild(tr);
-        });
-      }
+async function confermaOspite(dati){
+  try{
+    // chiama doPost con action="ingresso", nominativo, colore
+    await fetch(sheetURL,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify({
+        action: "ingresso",
+        nominativo: dati.nominativo,
+        colore: dati.colore || ""
+      })
+    });
+  }catch(err){console.error("Errore POST:",err);}
+}
 
-      // Filtro ricerca per nominativo
-      function filterList(query) {
-        const q = query.toLowerCase();
-        const filtrati = allGuests.filter((r) =>
-          (r.nominativo || "").toLowerCase().includes(q)
-        );
-        renderTable(filtrati);
-      }
+function renderTable(){
+  tbody.innerHTML='';
+  const qRaw = searchBox.value || '';
+  const q = qRaw.toLowerCase();
+  const showAllBySpace = (qRaw === ' ');
 
-      // Segna l'ingresso chiamando l'API /exec?action=ingresso
-      async function segnaIngresso(nominativo, colore) {
-        if (!nominativo) return;
+  let rows=[];
+  if(listVisible || showAllBySpace){
+    rows=rawRows;
+  } else if(q.trim().length>0){
+    rows=rawRows.filter(r=>{
+      return String(r.nominativo??'').toLowerCase().includes(q) ||
+             String(r.colore??'').toLowerCase().includes(q) ||
+             String(r.invitato??'').toLowerCase().includes(q);
+    });
+  }
 
-        const conferma = confirm("Segnare l'ingresso per: " + nominativo + "?");
-        if (!conferma) return;
+  if(rows.length>0){tableCard.classList.remove('hidden');}
+  else{tableCard.classList.add('hidden');}
 
-        try {
-          const params = new URLSearchParams({
-            action: "ingresso",
-            nominativo: nominativo,
-            colore: colore
-          });
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${r.nominativo || ''}</td><td>${r.colore||''}</td><td>${r.invitato||''}</td>`;
 
-          const res = await fetch(API_URL + "?" + params.toString());
-          const json = await res.json();
+    // consideriamo "confermato" se ingresso NON è vuoto
+    const giàConfermato = r.ingresso && String(r.ingresso).trim() !== "";
+    if(giàConfermato){
+      tr.classList.add('confirmed');
+      tr.style.pointerEvents='none';
+    }
 
-          if (json.ok && json.updated) {
-            alert("Ingresso registrato.");
-            // Ricarico la lista per aggiornare la colonna "Ingresso"
-            loadGuests();
-          } else if (json.ok && !json.updated) {
-            alert("Ospite già registrato o non trovato.");
-          } else {
-            alert("Errore: " + (json.error || "sconosciuto"));
-          }
-        } catch (err) {
-          console.error(err);
-          alert("Errore durante il check-in.");
-        }
-      }
+    tr.addEventListener('click',()=>{
+      if(giàConfermato) return;
+      [...tbody.children].forEach(row=>row.classList.remove('selected'));
+      tr.classList.add('selected');
+      selectedRow=tr; selectedData=r;
+      confirmCard.classList.remove('hidden');
+    });
+    tbody.appendChild(tr);
+  });
 
-      // Utility per evitare problemi con apostrofi nelle stringhe HTML
-      function escapeForAttr(str) {
-        return String(str)
-          .replace(/'/g, "\\'")
-          .replace(/"/g, "&quot;");
-      }
+  // conteggio ingressi confermati
+  let c=rawRows.filter(r => r.ingresso && String(r.ingresso).trim() !== "").length;
+  countChecked.textContent=c; 
+  countTotal.textContent=rawRows.length;
+}
 
-      // Quando la pagina è pronta, carico la lista
-      window.addEventListener("load", loadGuests);
-    </script>
-  </body>
+searchBox.addEventListener('input', renderTable);
+
+confirmBtn.addEventListener('click', ()=>{
+  if(!selectedData) return;
+  confermaOspite(selectedData);
+  if(selectedRow) selectedRow.classList.remove('selected');
+  selectedRow.classList.add('confirmed');
+  selectedRow.style.pointerEvents='none';
+  confirmCard.classList.add('hidden');
+  listVisible=false; 
+  searchBox.value=""; 
+  tableCard.classList.add('hidden');
+  popupConfirm.style.display="block";
+  setTimeout(()=>popupConfirm.style.display="none",2000);
+  setTimeout(caricaLista,1000); // ricarica lista aggiornata
+});
+
+showListBtn.addEventListener('click', ()=>{
+  listVisible=!listVisible;
+  if(listVisible) searchBox.value="";
+  renderTable();
+});
+
+reportBtn.addEventListener('click', ()=>{
+  const ws=XLSX.utils.json_to_sheet(rawRows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Report');
+  XLSX.writeFile(wb,'report_completo.xlsx');
+});
+
+/* ===== RESET CON PASSWORD (2006) ===== */
+resetBtn.addEventListener('click',()=>{
+  modal.classList.add('show'); passwordInput.value="";
+});
+modalCancel.addEventListener('click',()=>{modal.classList.remove('show');});
+document.querySelectorAll('.keypad button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    let val=btn.textContent;
+    if(val==='←'){passwordInput.value=passwordInput.value.slice(0,-1);}
+    else if(val==='OK'){modalConfirm.click();}
+    else{passwordInput.value+=val;}
+  });
+});
+modalConfirm.addEventListener('click',()=>{
+  if(passwordInput.value==="2006"){ modal.classList.remove('show'); location.reload(true);}
+  else{alert("Password errata");}
+});
+
+/* ===== AVVIO ===== */
+caricaLista();
+setInterval(caricaLista,5000); // aggiorna ogni 5s
+</script>
+</body>
 </html>
