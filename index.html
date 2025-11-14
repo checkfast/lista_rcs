@@ -175,26 +175,29 @@ function renderTable(){
     }
 
     tr.addEventListener('click', () => {
-  if (giàConfermato) return;
+      if (giàConfermato) return;
 
-  // Se la riga è già selezionata, la deseleziono
-  if (tr.classList.contains('selected')) {
-    tr.classList.remove('selected');
-    selectedRow = null;
-    selectedData = null;
-    confirmCard.classList.add('hidden');
-    return;
-  }
+      // Se la riga è già selezionata → la deseleziono
+      if (tr.classList.contains('selected')) {
+        tr.classList.remove('selected');
+        selectedRow = null;
+        selectedData = null;
+        confirmCard.classList.add('hidden');
+        return;
+      }
 
-  // Altrimenti tolgo la selezione dalle altre righe
-  [...tbody.children].forEach(row => row.classList.remove('selected'));
+      // Tolgo la selezione da tutte le altre righe
+      [...tbody.children].forEach(row => row.classList.remove('selected'));
 
-  // E seleziono questa
-  tr.classList.add('selected');
-  selectedRow = tr;
-  selectedData = r;
-  confirmCard.classList.remove('hidden');
-});
+      // Seleziono questa
+      tr.classList.add('selected');
+      selectedRow = tr;
+      selectedData = r;
+      confirmCard.classList.remove('hidden');
+    });
+
+    tbody.appendChild(tr);
+  });
 
   // conteggio ingressi confermati
   let c=rawRows.filter(r => r.ingresso && String(r.ingresso).trim() !== "").length;
