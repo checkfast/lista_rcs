@@ -26,7 +26,14 @@
     .popupConfirm{position:fixed;top:15%;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:30px 40px;border-radius:12px;font-size:26px;font-weight:bold;display:none;z-index:99999;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.6);animation:pop .3s ease-out}
     @keyframes pop{from{transform:translateX(-50%) scale(.9);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
     .actionsBottom{text-align:center;margin-top:20px}
-    .actionsBottom button{min-width:140px;margin:8px;font-size:16px;color:#fff}
+    .actionsBottom button{
+  min-width:140px;
+  margin:6px;
+  font-size:15px;
+  padding:8px 10px;   /* <-- riduce l’altezza */
+  border-radius:6px;  /* <-- più compatti e moderni */
+  color:#fff;
+}
     #showListBtn{background:#2563eb}
     #reportBtn{background:#d97706}
     #resetBtn{background:#dc2626}
